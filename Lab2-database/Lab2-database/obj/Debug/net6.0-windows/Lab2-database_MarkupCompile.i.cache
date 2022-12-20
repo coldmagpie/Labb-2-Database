@@ -16,5 +16,5 @@ C:\Users\maggi\OneDrive\Documents\GitHub\Labb2-Database\Lab2-database\Lab2-datab
 223668887703
 MainWindow.xaml;Views\AlbumView.xaml;Views\ArtistView.xaml;Views\PlaylistView\CreateView.xaml;Views\PlaylistView\EditView.xaml;Views\PlaylistView\ModifyView.xaml;Views\StartView.xaml;Views\TrackView\CreateTrackView.xaml;Views\TrackView\EditTrackView.xaml;
 
-True
+False
 
