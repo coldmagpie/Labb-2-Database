@@ -89,6 +89,7 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
                 .Single(p => p.PlaylistId == SelectedPlaylist.PlaylistId);
             pl.Name = NewName;
             _dataManager.MusicLabb2Context.SaveChanges();
+            NewName = string.Empty;
             UpdatePlaylists();
         }
 
@@ -98,6 +99,7 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
                 .Single(p => p.PlaylistId == SelectedPlaylist.PlaylistId);
             _dataManager.MusicLabb2Context.Playlists.Remove(toDelete);
             _dataManager.MusicLabb2Context.SaveChanges();
+            NewName = string.Empty;
             UpdatePlaylists();
         }
         private void UpdatePlaylists()
