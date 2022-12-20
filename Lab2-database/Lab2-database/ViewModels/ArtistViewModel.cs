@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ namespace Lab2_database.ViewModels
     public class ArtistViewModel: ObservableObject
     {
         private NavigationManager _navigationManager;
+        private readonly DataManager _dataManager;
         public IRelayCommand NavigateConfirmCommand { get; }
         public IRelayCommand NavigateChangeCommand { get; }
         public IRelayCommand NavigateDeleteCommand { get; }
@@ -41,9 +43,9 @@ namespace Lab2_database.ViewModels
             }
         }
 
-        private List<Artist> _artists;
+        private ObservableCollection<Artist> _artists;
 
-        public List<Artist> Artists
+        public ObservableCollection<Artist> Artists
         {
             get { return _artists; }
             set
@@ -64,47 +66,65 @@ namespace Lab2_database.ViewModels
                 NavigateDeleteCommand.NotifyCanExecuteChanged();
                 NavigateChangeCommand.NotifyCanExecuteChanged();
                 
-                if (SelectedArtist != null)
+                if (_selectedArtist != null)
                 {
-                    NewName = SelectedArtist.Name;
+                    NewName = _selectedArtist.Name;
                 }
             }
         }
-        public ArtistViewModel(NavigationManager navigationManager)
+        public ArtistViewModel(NavigationManager navigationManager, DataManager dataManager)
         {
             _navigationManager = navigationManager;
-            var context = new MusicLabb2Context();
-            Artists = context.Artists.ToList();
-            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager));
-            NavigateConfirmCommand = new RelayCommand(() =>
-            {
-                var newArtist = new Artist()
-                {
-                    Name = NewArtist,
-                    ArtistId = context.Artists.ToList().Count > 0 ? context.Artists.ToList().MaxBy(artist => artist.ArtistId).ArtistId + 1 : 1
-                };
-                context.Artists.Add(newArtist);
-                context.SaveChanges();
-                NewArtist = string.Empty;
-            }, () => !string.IsNullOrEmpty(NewArtist));
+            _dataManager = dataManager;
+            _artists = new ObservableCollection<Artist>(_dataManager.MusicLabb2Context.Artists.ToList());
+            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager, _dataManager));
+            NavigateConfirmCommand = new RelayCommand(CreateArtist, () => !string.IsNullOrEmpty(NewArtist));
 
-            NavigateChangeCommand = new RelayCommand(() =>
-            {
-                var artist = context.Artists.ToList()
-                    .Single(p => p.ArtistId == SelectedArtist.ArtistId);
-                artist.Name = NewName;
-                context.SaveChanges();
-                Artists = context.Artists.ToList();
-            }, () => SelectedArtist != null);
+            NavigateChangeCommand = new RelayCommand(EditArtist, () => _selectedArtist != null);
 
-            NavigateDeleteCommand = new RelayCommand(() =>
+            NavigateDeleteCommand = new RelayCommand(DeleteArtist, () => _selectedArtist != null);
+        }
+
+        private void CreateArtist()
+        {
+            var newArtist = new Artist()
             {
-                var toDelete = context.Artists.ToList()
-                    .Single(p => p.ArtistId == SelectedArtist.ArtistId);
-                context.Artists.Remove(toDelete);
-                context.SaveChanges();
-                Artists = context.Artists.ToList();
-            }, () => SelectedArtist != null);
+                Name = NewArtist,
+                ArtistId = _dataManager.MusicLabb2Context.Artists.ToList().Count > 0 ? _dataManager.MusicLabb2Context.Artists.ToList().MaxBy(artist => artist.ArtistId).ArtistId + 1 : 1
+            };
+            _dataManager.MusicLabb2Context.Artists.Add(newArtist);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            UpdateArtists();
+            NewArtist = string.Empty;
+        }
+
+        private void EditArtist()
+        {
+            var artist = _dataManager.MusicLabb2Context.Artists.ToList()
+                .Single(p => p.ArtistId == SelectedArtist.ArtistId);
+            artist.Name = NewName;
+            _dataManager.MusicLabb2Context.SaveChanges();
+            NewName = string.Empty;
+            UpdateArtists();
+        }
+
+        private void DeleteArtist()
+        {
+            var toDelete = _dataManager.MusicLabb2Context.Artists.Include(a=> a.Albums).ToList()
+                .Single(p => p.ArtistId == SelectedArtist.ArtistId);
+            _dataManager.MusicLabb2Context.Artists.Remove(toDelete);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            NewName = string.Empty;
+            UpdateArtists();
+        }
+
+        private void UpdateArtists()
+        {
+            Artists.Clear();
+            foreach (var artist in _dataManager.MusicLabb2Context.Artists.ToList())
+            {
+                Artists.Add(artist);
+            }
         }
     }
 }

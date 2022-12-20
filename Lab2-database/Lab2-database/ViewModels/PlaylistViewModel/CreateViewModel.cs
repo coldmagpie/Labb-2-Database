@@ -14,6 +14,7 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
     public class CreateViewModel : ObservableObject
     {
         private NavigationManager _navigationManager;
+        private readonly DataManager _dataManager;
 
         public IRelayCommand NavigateGoBackCommand { get; }
 
@@ -31,22 +32,24 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
             }
         }
 
-        public CreateViewModel(NavigationManager navigationManager)
+        public CreateViewModel(NavigationManager navigationManager, DataManager dataManager)
         {
             _navigationManager = navigationManager;
-            var context = new MusicLabb2Context();
-            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager));
-            NavigateConfirmCommand = new RelayCommand(() =>
+            _dataManager = dataManager;
+            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager, _dataManager));
+            NavigateConfirmCommand = new RelayCommand(CreatePlaylist, () => !string.IsNullOrEmpty(NewName));
+        }
+
+        private void CreatePlaylist()
+        {
+            var newPlaylist = new Playlist()
             {
-                var newPlaylist = new Playlist()
-                {
-                    Name = NewName,
-                    PlaylistId = context.Playlists.ToList().Count > 0 ? context.Playlists.ToList().MaxBy(playlist => playlist.PlaylistId).PlaylistId + 1 : 1
-                };
-                context.Playlists.Add(newPlaylist);
-                context.SaveChanges();
-                NewName = string.Empty;
-            }, () => !string.IsNullOrEmpty(NewName));
+                Name = NewName,
+                PlaylistId = _dataManager.MusicLabb2Context.Playlists.ToList().Count > 0 ? _dataManager.MusicLabb2Context.Playlists.ToList().MaxBy(playlist => playlist.PlaylistId).PlaylistId + 1 : 1
+            };
+            _dataManager.MusicLabb2Context.Playlists.Add(newPlaylist);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            NewName = string.Empty;
         }
     }
 

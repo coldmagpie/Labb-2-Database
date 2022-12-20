@@ -44,7 +44,7 @@ public partial class MusicLabb2Context : DbContext
 
             entity.HasOne(d => d.Artist).WithMany(p => p.Albums)
                 .HasForeignKey(d => d.ArtistId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__Albums__ArtistId__286302EC");
         });
 
@@ -84,9 +84,11 @@ public partial class MusicLabb2Context : DbContext
                     "PlaylistTrack",
                     r => r.HasOne<Track>().WithMany()
                         .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("FK__PlaylistT__Track__49C3F6B7"),
                     l => l.HasOne<Playlist>().WithMany()
                         .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("FK__PlaylistT__Playl__48CFD27E"),
                     j =>
                     {
@@ -104,7 +106,7 @@ public partial class MusicLabb2Context : DbContext
             entity.Property(e => e.Name).HasMaxLength(200);
 
             entity.HasOne(d => d.Album).WithMany(p => p.Tracks)
-                .HasForeignKey(d => d.AlbumId)
+                .HasForeignKey(d => d.AlbumId).OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__Tracks__UnitPric__2F10007B");
 
             entity.HasOne(d => d.Genre).WithMany(p => p.Tracks)

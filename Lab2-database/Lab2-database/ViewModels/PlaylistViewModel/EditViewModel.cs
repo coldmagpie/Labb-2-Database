@@ -18,6 +18,7 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
     public class EditViewModel : ObservableObject
     {
         private NavigationManager _navigationManager;
+        private readonly DataManager _dataManager;
         public IRelayCommand NavigateDeleteCommand { get; }
         public IRelayCommand NavigateGoBackCommand { get; }
         public IRelayCommand NavigateChangeCommand { get; }
@@ -37,8 +38,8 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
             }
         }
 
-        private List<Playlist> _playlists;
-        public List<Playlist> Playlists
+        private ObservableCollection<Playlist> _playlists;
+        public ObservableCollection<Playlist> Playlists
         {
             get { return _playlists; }
             set
@@ -65,35 +66,47 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
                 }
             }
         }
-        public EditViewModel(NavigationManager navigationManager)
+        public EditViewModel(NavigationManager navigationManager, DataManager dataManager)
         {
             _navigationManager = navigationManager;
-            var context = new MusicLabb2Context();
-            Playlists = context.Playlists.Include(playlist => playlist.Tracks).ToList();
+            _dataManager = dataManager;
+            _playlists = new ObservableCollection<Playlist>(_dataManager.MusicLabb2Context.Playlists.Include(playlist => playlist.Tracks).ToList());
 
-            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager));
-            NavigateChangeCommand = new RelayCommand(() =>
-            {
-                var pl = context.Playlists.Include(p => p.Tracks)
-                    .Single(p => p.PlaylistId == SelectedPlaylist.PlaylistId);
-                pl.Name = NewName;
-                context.SaveChanges();
-                Playlists = context.Playlists.ToList();
-            }, (() => _selectedPlaylist != null));
+            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager, _dataManager));
+            NavigateChangeCommand = new RelayCommand(EditPlaylist, () => _selectedPlaylist != null);
 
-            NavigateDeleteCommand = new RelayCommand(() =>
-            {
-                var toDelete = context.Playlists.Include(p => p.Tracks)
-                    .Single(p => p.PlaylistId == SelectedPlaylist.PlaylistId);
-                context.Playlists.Remove(toDelete);
-                context.SaveChanges();
-                Playlists = context.Playlists.ToList();
-            }, () => _selectedPlaylist != null);
+            NavigateDeleteCommand = new RelayCommand(DeletePlaylist, () => _selectedPlaylist != null);
 
             NavigateModifyCommand = new RelayCommand(() =>
             {
-                _navigationManager.CurrentViewModel = new ModifyViewModel(_navigationManager, SelectedPlaylist);
+                _navigationManager.CurrentViewModel = new ModifyViewModel(_navigationManager, SelectedPlaylist, _dataManager);
             }, () => _selectedPlaylist != null);
+        }
+
+        private void EditPlaylist()
+        {
+            var pl = _dataManager.MusicLabb2Context.Playlists.Include(p => p.Tracks)
+                .Single(p => p.PlaylistId == SelectedPlaylist.PlaylistId);
+            pl.Name = NewName;
+            _dataManager.MusicLabb2Context.SaveChanges();
+            UpdatePlaylists();
+        }
+
+        private void DeletePlaylist()
+        {
+            var toDelete = _dataManager.MusicLabb2Context.Playlists.Include(p => p.Tracks)
+                .Single(p => p.PlaylistId == SelectedPlaylist.PlaylistId);
+            _dataManager.MusicLabb2Context.Playlists.Remove(toDelete);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            UpdatePlaylists();
+        }
+        private void UpdatePlaylists()
+        {
+            Playlists.Clear();
+            foreach (var playlist in _dataManager.MusicLabb2Context.Playlists.ToList())
+            {
+                Playlists.Add(playlist);
+            }
         }
     }
 }

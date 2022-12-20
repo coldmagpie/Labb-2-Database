@@ -13,6 +13,7 @@ namespace Lab2_database.ViewModels.TrackViewModel
     public class CreateTrackViewModel : ObservableObject
     {
         private NavigationManager _navigationManager;
+        private readonly DataManager _dataManager;
         public IRelayCommand NavigateConfirmCommand { get; }
         public IRelayCommand NavigateGoBackCommand { get; }
 
@@ -132,13 +133,13 @@ namespace Lab2_database.ViewModels.TrackViewModel
 
         private double price = 0.99;
 
-        public CreateTrackViewModel(NavigationManager navigationManager)
+        public CreateTrackViewModel(NavigationManager navigationManager, DataManager dataManager)
         {
             _navigationManager = navigationManager;
-            var context = new MusicLabb2Context();
-            Albums = context.Albums.ToList();
-            MediaTypes = context.MediaTypes.ToList();
-            Genres = context.Genres.ToList();
+            _dataManager = dataManager;
+            _albums = _dataManager.MusicLabb2Context.Albums.ToList();
+            _mediaTypes = _dataManager.MusicLabb2Context.MediaTypes.ToList();
+            _genres = _dataManager.MusicLabb2Context.Genres.ToList();
 
             for (int i = 1; i < 61; i++)
             {
@@ -150,29 +151,27 @@ namespace Lab2_database.ViewModels.TrackViewModel
                 Seconds.Add(i);
             }
 
-            NavigateConfirmCommand = new RelayCommand(() =>
+            NavigateConfirmCommand = new RelayCommand(CreateTrack, CanExecute);
+            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager, _dataManager));
+        }
+
+        private void CreateTrack()
+        {
+            var newTrack = new Track()
             {
-                var newTrack = new Track()
-                {
-                    TrackId = context.Tracks.ToList().Count > 0 ? context.Tracks.ToList().MaxBy(track => track.TrackId).TrackId + 1 : 1,
-                    Name = NewTrack,
-                    AlbumId = context.Albums.ToList().Single(a => a.AlbumId == SelectedAlbum.AlbumId).AlbumId,
-                    MediaTypeId = context.MediaTypes.ToList().Single(m => m.MediaTypeId == SelectedMediaType.MediaTypeId).MediaTypeId,
-                    GenreId = context.Genres.ToList().Single(g => g.GenreId == SelectedGenre.GenreId).GenreId,
-                    Composer = TrackComposer is null ? "-" : TrackComposer,
-                    Milliseconds = SelectedMinute * 60000 + SelectedSecond * 1000,
-                    UnitPrice = price
-                };
-                if (TrackComposer == null)
-                {
-                    TrackComposer = "-";
-                }
-                context.Tracks.Add(newTrack);
-                context.SaveChanges();
-                NewTrack = string.Empty;
-                TrackComposer = string.Empty;
-            }, CanExecute);
-            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager));
+                TrackId = _dataManager.MusicLabb2Context.Tracks.ToList().Count > 0 ? _dataManager.MusicLabb2Context.Tracks.ToList().MaxBy(track => track.TrackId).TrackId + 1 : 1,
+                Name = NewTrack,
+                AlbumId = _dataManager.MusicLabb2Context.Albums.ToList().Single(a => a.AlbumId == SelectedAlbum.AlbumId).AlbumId,
+                MediaTypeId = _dataManager.MusicLabb2Context.MediaTypes.ToList().Single(m => m.MediaTypeId == SelectedMediaType.MediaTypeId).MediaTypeId,
+                GenreId = _dataManager.MusicLabb2Context.Genres.ToList().Single(g => g.GenreId == SelectedGenre.GenreId).GenreId,
+                Composer = _trackComposer is null ? "-" : TrackComposer,
+                Milliseconds = _selectedMinute * 60000 + _selectedSecond * 1000,
+                UnitPrice = price
+            };
+            _dataManager.MusicLabb2Context.Tracks.Add(newTrack);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            NewTrack = string.Empty;
+            TrackComposer = string.Empty;
         }
 
         private bool CanExecute()

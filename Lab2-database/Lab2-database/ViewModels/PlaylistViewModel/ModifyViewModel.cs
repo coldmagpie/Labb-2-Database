@@ -16,11 +16,13 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
     public class ModifyViewModel : ObservableObject
     {
         private NavigationManager _navigationManager;
+        private readonly DataManager _dataManager;
         public IRelayCommand NavigateGoBackCommand { get; }
         public IRelayCommand NavigateAddCommand { get; }
         public IRelayCommand NavigateRemoveCommand { get; }
 
         private string _playlistName;
+
         public string PlaylistName
         {
             get { return _playlistName; }
@@ -28,6 +30,7 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
         }
 
         private ObservableCollection<Track> _tracksInPlaylist;
+
         public ObservableCollection<Track> TracksInPlaylist
         {
             get { return _tracksInPlaylist; }
@@ -39,11 +42,13 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
         }
 
         private ObservableCollection<Track> _tracks;
+
         public ObservableCollection<Track> Tracks
         {
             get { return _tracks; }
             set { _tracks = value; }
         }
+
         private Track _selectedTrackInPlaylist;
 
         public Track SelectedTrackInPlaylist
@@ -57,6 +62,7 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
         }
 
         private Track _selectedTrack;
+
         public Track SelectedTrack
         {
             get { return _selectedTrack; }
@@ -67,44 +73,63 @@ namespace Lab2_database.ViewModels.PlaylistViewModel
             }
         }
 
-        public ModifyViewModel(NavigationManager navigationManager, Playlist playlist)
+        public ModifyViewModel(NavigationManager navigationManager, Playlist playlist, DataManager dataManager)
         {
             _navigationManager = navigationManager;
             _playlistName = playlist.Name;
-            var context = new MusicLabb2Context();
-            TracksInPlaylist = new ObservableCollection<Track>(playlist.Tracks.ToList());
-            Tracks = new ObservableCollection<Track>(context.Tracks);
+            _dataManager = dataManager;
+            _tracksInPlaylist = new ObservableCollection<Track>(playlist.Tracks.ToList());
+            _tracks = new ObservableCollection<Track>(_dataManager.MusicLabb2Context.Tracks);
 
-            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new EditViewModel(_navigationManager));
-            NavigateAddCommand = new RelayCommand(() =>
-            {
-                if (SelectedTrack is null)
-                {
-                    return;
-                }
+            NavigateGoBackCommand = new RelayCommand(() =>
+                _navigationManager.CurrentViewModel = new EditViewModel(_navigationManager, _dataManager));
+            NavigateAddCommand = new RelayCommand(() => AddTrack(playlist));
 
-                var tempPlaylist = context.Playlists.Include(p => p.Tracks).Single(p => p.PlaylistId == playlist.PlaylistId);
-
-                if (tempPlaylist.Tracks.Any(t => t.TrackId == SelectedTrack.TrackId))
-                {
-                    return;
-                }
-                tempPlaylist.Tracks.Add(SelectedTrack);
-                context.SaveChanges();
-                TracksInPlaylist = new ObservableCollection<Track>(context.Playlists.Single(p => p.PlaylistId == playlist.PlaylistId).Tracks.ToList());
-            });
-
-            NavigateRemoveCommand = new RelayCommand(() =>
-            {
-                if (SelectedTrackInPlaylist is null)
-                {
-                    return;
-                }
-                var tempPlaylist = context.Playlists.Include(p => p.Tracks).Single(p => p.PlaylistId == playlist.PlaylistId);
-                tempPlaylist.Tracks.Remove(SelectedTrackInPlaylist);
-                context.SaveChanges();
-                TracksInPlaylist = new ObservableCollection<Track>(context.Playlists.Single(p => p.PlaylistId == playlist.PlaylistId).Tracks.ToList());
-            });
+            NavigateRemoveCommand = new RelayCommand(() => RemoveTrack(playlist));
         }
+
+        private void AddTrack(Playlist playlist)
+        {
+            if (SelectedTrack is null)
+            {
+                return;
+            }
+
+            var tempPlaylist = _dataManager.MusicLabb2Context.Playlists.Include(p => p.Tracks)
+                .Single(p => p.PlaylistId == playlist.PlaylistId);
+
+            if (tempPlaylist.Tracks.Any(t => t.TrackId == SelectedTrack.TrackId))
+            {
+                return;
+            }
+
+            tempPlaylist.Tracks.Add(SelectedTrack);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            UpdatePlaylists(playlist);
+        }
+
+        private void RemoveTrack(Playlist playlist)
+        {
+            if (_selectedTrackInPlaylist is null)
+            {
+                return;
+            }
+
+            var tempPlaylist = _dataManager.MusicLabb2Context.Playlists.Include(p => p.Tracks)
+                .Single(p => p.PlaylistId == playlist.PlaylistId);
+            tempPlaylist.Tracks.Remove(SelectedTrackInPlaylist);
+            _dataManager.MusicLabb2Context.SaveChanges();
+            UpdatePlaylists(playlist);
+        }
+        private void UpdatePlaylists(Playlist playlist)
+        {
+            TracksInPlaylist.Clear();
+
+            foreach (Track track in playlist.Tracks)
+            {
+                TracksInPlaylist.Add(track);
+            }
+        }
+
     }
 }

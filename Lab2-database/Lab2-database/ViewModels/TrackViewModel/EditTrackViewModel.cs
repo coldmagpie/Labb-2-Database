@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ namespace Lab2_database.ViewModels.TrackViewModel
     public class EditTrackViewModel:ObservableObject
     {
         private NavigationManager _navigationManager;
+        private readonly DataManager _dataManager;
         public IRelayCommand NavigateDeleteCommand { get; }
         public IRelayCommand NavigateGoBackCommand { get; }
         public IRelayCommand NavigateConfirmCommand { get; }
@@ -70,8 +72,8 @@ namespace Lab2_database.ViewModels.TrackViewModel
             }
         }
 
-        private List<Track> _tracks;
-        public List<Track> Tracks
+        private ObservableCollection<Track> _tracks;
+        public ObservableCollection<Track> Tracks
         {
             get { return _tracks; }
             set
@@ -97,42 +99,54 @@ namespace Lab2_database.ViewModels.TrackViewModel
                 }
             }
         }
-        public EditTrackViewModel(NavigationManager navigationManager)
+        public EditTrackViewModel(NavigationManager navigationManager, DataManager dataManager)
         {
             _navigationManager = navigationManager;
-            var context = new MusicLabb2Context();
-            Tracks =  context.Tracks.ToList();
+            _dataManager = dataManager;
+            _tracks =  new ObservableCollection<Track>(_dataManager.MusicLabb2Context.Tracks.ToList());
 
             for (int i = 1; i < 61; i++)
             {
-                NewMinutes.Add(i);
+                _newMinutes.Add(i);
             }
 
             for (int i = 0; i < 61; i++)
             {
-                NewSeconds.Add(i);
+                _newSeconds.Add(i);
             }
 
-            NavigateConfirmCommand = new RelayCommand(() =>
+            NavigateConfirmCommand = new RelayCommand(EditTrack, CanExecute);
+            NavigateDeleteCommand = new RelayCommand(DeleteTrack, () => _selectedTrack != null);
+            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager, _dataManager));
+        }
+
+        private void EditTrack()
+        {
+            var track = _dataManager.MusicLabb2Context.Tracks.ToList()
+                .Single(t => t.TrackId == SelectedTrack.TrackId);
+            track.Name = NewName;
+            track.Milliseconds = SelectedMinute * 60000 + SelectedSecond * 1000;
+            _dataManager.MusicLabb2Context.SaveChanges();
+            UpdateTracks();
+            NewName = string.Empty;
+        }
+
+        private void DeleteTrack()
+        {
+            var toDelete = _dataManager.MusicLabb2Context.Tracks.ToList()
+                .Single(t => t.TrackId == SelectedTrack.TrackId);
+            _dataManager.MusicLabb2Context.Tracks.Remove(toDelete);
+            _dataManager.MusicLabb2Context.SaveChanges();
+           UpdateTracks();
+            NewName = string.Empty;
+        }
+        private void UpdateTracks()
+        {
+            Tracks.Clear();
+            foreach (var track in _dataManager.MusicLabb2Context.Tracks.ToList())
             {
-                var track = context.Tracks.ToList()
-                    .Single(t => t.TrackId == SelectedTrack.TrackId);
-                track.Name = NewName;
-                track.Milliseconds = SelectedMinute * 60000 + SelectedSecond * 1000;
-                context.SaveChanges();
-                Tracks = context.Tracks.ToList();
-                NewName = string.Empty;
-            }, CanExecute);
-            NavigateDeleteCommand = new RelayCommand(() =>
-            {
-                var toDelete = context.Tracks.ToList()
-                    .Single(t => t.TrackId == SelectedTrack.TrackId);
-                context.Tracks.Remove(toDelete);
-                context.SaveChanges();
-                Tracks = context.Tracks.ToList();
-                NewName = string.Empty;
-            }, () => _selectedTrack != null);
-            NavigateGoBackCommand = new RelayCommand(() => _navigationManager.CurrentViewModel = new StartViewModel(_navigationManager));
+                Tracks.Add(track);
+            }
         }
         private bool CanExecute()
         {

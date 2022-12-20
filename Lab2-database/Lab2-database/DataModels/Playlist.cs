@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Lab2_database.DataModels;
 
-public partial class Playlist
+public partial class Playlist 
 {
     public int PlaylistId { get; set; }
 
